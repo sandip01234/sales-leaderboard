@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sales Leaderboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-900">
+  <div class="max-w-4xl mx-auto p-6">
+    <div class="flex justify-between items-end mb-10">
+      <div>
+        <h1 class="text-4xl font-extrabold tracking-tight">Sales Leaderboard</h1>
+        <p class="text-gray-500 font-medium uppercase tracking-wider text-sm">Sales Team • Live Updates</p>
+      </div>
+      <div id="summary" class="text-right">
+        </div>
+    </div>
+
+    <div id="leaderboard" class="space-y-4">
+      <p class="text-center py-10 text-gray-400">Loading data...</p>
+    </div>
+
+    <div class="mt-16 bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
+      <h2 class="text-2xl font-bold mb-6">Record New Sale</h2>
+      <form id="saleForm" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div>
+          <label class="block text-sm font-semibold mb-2">Agent Name</label>
+          <input type="text" id="agentName" required placeholder="Ram Sharma" 
+            class="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold mb-2">Amount (Rs.)</label>
+          <input type="number" id="amount" required placeholder="50000" 
+            class="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold mb-2">Deals Closed</label>
+          <input type="number" id="deals" value="1" min="1" required 
+            class="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all">
+        </div>
+        <div class="md:col-span-3">
+          <button type="submit" id="submitBtn" 
+            class="w-full bg-slate-900 hover:bg-black text-white font-bold py-4 rounded-2xl text-lg transition-colors">
+            Record Sale
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    async function loadLeaderboard() {
+      try {
+        const res = await fetch('/api/leaderboard');
+        if (!res.ok) throw new Error('Failed to fetch data');
+        
+        const data = await res.json();
+        let html = '';
+        let totalSales = 0;
+
+        data.forEach((item, index) => {
+          totalSales += item.totalSales;
+          const rank = index + 1;
+          
+          // Color coding top 3 without icons
+          const rankColor = rank === 1 ? 'bg-blue-600' : rank === 2 ? 'bg-slate-700' : rank === 3 ? 'bg-slate-500' : 'bg-gray-200 text-gray-600';
+          const textColor = rank <= 3 ? 'text-white' : 'text-gray-600';
+
+          html += `
+            <div class="bg-white rounded-2xl p-6 flex items-center justify-between border border-gray-100 shadow-sm">
+              <div class="flex items-center gap-6">
+                <div class="w-12 h-12 ${rankColor} ${textColor} text-xl font-bold rounded-full flex items-center justify-center">
+                  ${rank}
+                </div>
+                <div>
+                  <p class="text-xl font-bold">${item.agentName}</p>
+                  <p class="text-gray-400 text-sm font-medium">${item.totalDeals} DEALS</p>
+                </div>
+              </div>
+              <div class="text-right">
+                <p class="text-2xl font-bold text-emerald-600">Rs. ${item.totalSales.toLocaleString('en-IN')}</p>
+              </div>
+            </div>`;
+        });
+
+        document.getElementById('leaderboard').innerHTML = html || '<p class="text-center text-gray-500">No sales recorded yet.</p>';
+        document.getElementById('summary').innerHTML = `
+          <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Team Total</p>
+          <p class="text-3xl font-black text-blue-600">Rs. ${totalSales.toLocaleString('en-IN')}</p>`;
+      } catch (err) {
+        console.error('Leaderboard Error:', err);
+        document.getElementById('leaderboard').innerHTML = '<p class="text-center text-red-500">Error loading leaderboard.</p>';
+      }
+    }
+
+    document.getElementById('saleForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('submitBtn');
+      
+      const payload = {
+        agentName: document.getElementById('agentName').value.trim(),
+        amount: parseFloat(document.getElementById('amount').value),
+        deals: parseInt(document.getElementById('deals').value)
+      };
+
+      // Disable button during request
+      btn.disabled = true;
+      btn.innerText = 'Processing...';
+
+      try {
+        const res = await fetch('/api/sales', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          document.getElementById('saleForm').reset();
+          loadLeaderboard();
+        } else {
+          alert('Failed to save sale. Please try again.');
+        }
+      } catch (err) {
+        alert('Connection error.');
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Record Sale';
+      }
+    });
+
+    // Initial load
+    loadLeaderboard();
+    // Refresh every 30 seconds (standard for live boards)
+    setInterval(loadLeaderboard, 30000);
+  </script>
+</body>
+</html>
