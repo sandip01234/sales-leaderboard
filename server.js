@@ -3,16 +3,15 @@ const cors = require('cors');
 const path = require('path');
 
 const app = express();
+// Render will provide the PORT via environment variables
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));   // ← This serves index.html
+app.use(express.static('public'));
 
-// In-memory storage
 let agentStats = new Map();
 
-// Sample data
 function loadSampleData() {
   const samples = [
     { agentName: "Ram Sharma", amount: 500000, deals: 12 },
@@ -33,7 +32,7 @@ function addSale(agentName, amount, deals) {
 
 loadSampleData();
 
-// APIs
+// API Endpoints
 app.post('/api/sales', (req, res) => {
   const { agentName, amount, deals } = req.body;
   if (!agentName || typeof amount !== 'number' || typeof deals !== 'number' || amount <= 0 || deals <= 0) {
@@ -63,7 +62,7 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Start the server
 app.listen(PORT, () => {
-  console.log(` Server running at http://localhost:${PORT}`);
-  console.log(` Open → http://localhost:${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });
